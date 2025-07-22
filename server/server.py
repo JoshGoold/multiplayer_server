@@ -2,6 +2,8 @@ import socket
 import threading
 import random
 import string
+import game_logic.main
+
 
 # Server credentials
 BACKLOG = 5
@@ -27,6 +29,7 @@ lock = threading.Lock()
 
 # Rooms dictionary: key is room_id (string), value is dictionary of {username: client_socket}
 rooms = {}
+connections = {}
 
 def server():
     print(f"[SERVER] started at {ADDR}")
@@ -66,6 +69,12 @@ def handle_client(conn, addr):
                     join_room(room_id, username, conn, addr)
             elif msg_type == QUIT:
                 connected = False
+            elif msg_type == CHAT:
+                message = msg.split(":")[1]
+                room_id = connections[conn]
+                username = rooms[room_id][conn]
+                if room_id:
+                    send_message(message, username, room_id)
 
         except ConnectionError:
             connected = False
@@ -89,8 +98,8 @@ def create_room(client, username, addr):
         room_id = gen_room_id()
         while room_id in rooms:
             room_id = gen_room_id()
-        
-        rooms[room_id] = {username: client}
+        connections[client] = room_id
+        rooms[room_id] = {client: username}
     
     client.send(f"Room created successfully. Room ID: {room_id}\n".encode())
     broadcast_to_room(room_id, f"{username} has created the room (Room ID: {room_id})")
@@ -109,8 +118,8 @@ def join_room(room_id, username, client, addr):
             client.send("ERROR: Username already taken in this room\n".encode())
             return
             
-        rooms[room_id][username] = client
-    
+        rooms[room_id][client] = username
+    connections[client] = room_id
     client.send(f"Successfully joined room {room_id}\n".encode())
     broadcast_to_room(room_id, f"{username} has joined room {room_id}")
     print(f"[ROOM JOINED] {username} joined room {room_id} at {addr}")
@@ -123,6 +132,17 @@ def broadcast_to_room(room_id, message):
                     client.send(f"{message}\n".encode())
                 except ConnectionError:
                     print(f"[ERROR] Failed to send message to {username} in room {room_id}")
+
+def send_message(message, p_username, room_id):
+    if room_id in rooms:
+        for client, username in rooms[room_id].items():
+            try:
+                if p_username != username:
+                    client.send(f"{p_username}: {message}".encode())
+                else:
+                    client.send(f"You: {message}".encode())
+            except ConnectionError:
+                print(f"[ERROR] Failed to send message to {username} in room {room_id}")
 
 if __name__ == "__main__":
     server()       
