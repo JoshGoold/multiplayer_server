@@ -4,12 +4,11 @@ import sys
 
 # Server address
 HOST = socket.gethostbyname(socket.gethostname())
-PORT = 5050
+PORT = 5060
 SERVER_ADDR = (HOST, PORT)
 DATA_BUFF = 2048
 
 def client():
-    # Create socket and connect to server
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect(SERVER_ADDR)
@@ -18,88 +17,60 @@ def client():
         print(f"ERROR: Failed to connect to server: {e}")
         return
 
-    # Track if client is in a room
-    in_room = False
-    current_room_id = None
 
     # Start a thread to listen for server messages
-    def receive_messages():
-        nonlocal in_room, current_room_id
+    def listen_for_messages_thread():
         while True:
-            try:
-                msg = sock.recv(DATA_BUFF).decode().strip()
-                if not msg:  # Server closed connection
-                    print("DISCONNECTED: Server closed the connection")
-                    sock.close()
-                    break
-                print(f"{msg}")
-                # Update in_room status based on server responses
-                if "Room created successfully" in msg or "Successfully joined room" in msg:
-                    in_room = True
-                    if "Room ID: " in msg:
-                        current_room_id = msg.split("Room ID: ")[1].split("\n")[0]
-                elif "has disconnected" in msg or "ERROR: Room does not exist" in msg:
-                    in_room = False
-                    current_room_id = None
-            except ConnectionError:
-                print("DISCONNECTED: Connection to server lost")
-                sock.close()
+            msg = sock.recv(DATA_BUFF).decode().strip()
+            if not msg:  
+                print("[DISCONNECTED]: Server closed the connection")
                 break
+            print(f"\n{msg}\n")
+        sock.close()
+                
 
     # Start the receive thread
-    receive_thread = threading.Thread(target=receive_messages, daemon=True)
+    receive_thread = threading.Thread(target=listen_for_messages_thread, daemon=True)
     receive_thread.start()
 
-    try:
-        while True:
-            # Show simplified menu based on whether user is in a room
-            if in_room:
-                print(f"\nIn room {current_room_id}: (1) Chat, (2) Quit")
-                op = input("Enter 1 or 2: ").strip()
-            else:
-                print("\nOptions: (1) Create room, (2) Join room, (3) Quit")
-                op = input("Enter 1, 2, or 3: ").strip()
+    phase1 = True
+    while phase1:
+        answer = int(input("CREATE ROOM: 1\nJOIN ROOM: 2\nQUIT: 3\nEnter here:"))
+        if answer == 1:
+            username = input("Username: ").strip()
+            if not username:
+                print("[ERROR]: Username cannot be empty")
+                continue
+            sock.send(f"CREATE:{username}".encode())
+            phase1 = False
+        elif answer == 2:
+            room_id = input("Room ID: ").strip()
+            username = input("Username: ").strip()
+            if not room_id or not username:
+                print("ERROR: Room ID and username cannot be empty")
+                continue
+            sock.send(f"JOIN:{room_id}:{username}".encode())
+            phase1 = False
+        elif answer == 3:
+            sock.send("QUIT:".encode())
+            break
 
-            if in_room:
-                if op == "1":
-                    message = input("Message: ").strip()
-                    if not message:
-                        print("ERROR: Message cannot be empty")
-                        continue
-                    sock.send(f"CHAT:{message}".encode())
-                elif op == "2":
-                    sock.send("QUIT:".encode())
-                    break
-                else:
-                    print("ERROR: Enter 1 or 2")
-            else:
-                if op == "1":
-                    username = input("Username: ").strip()
-                    if not username:
-                        print("ERROR: Username cannot be empty")
-                        continue
-                    sock.send(f"CREATE:{username}".encode())
-                elif op == "2":
-                    room_id = input("Room ID: ").strip()
-                    username = input("Username: ").strip()
-                    if not room_id or not username:
-                        print("ERROR: Room ID and username cannot be empty")
-                        continue
-                    sock.send(f"JOIN:{room_id}:{username}".encode())
-                elif op == "3":
-                    sock.send("QUIT:".encode())
-                    break
-                else:
-                    print("ERROR: Enter 1, 2, or 3")
+    while True:
+        op = int(input("Enter (1) Chat or (2) to Exit: ").strip())
+        if op == 1:
+            message = input("Message: ").strip()
+            if not message:
+                print("[ERROR]: Message cannot be empty")
+            sock.send(f"CHAT:{message}".encode())
+        elif op == 2:
+            sock.send("QUIT:".encode())
+            break
+        else:
+            print("[404]: Enter 1 or 2")
 
-    except KeyboardInterrupt:
-        print("\nCLOSING: Shutting down")
-        sock.send("QUIT:".encode())
-    except ConnectionError as e:
-        print(f"ERROR: Connection error: {e}")
-    finally:
-        sock.close()
-        print("DISCONNECTED: Connection closed")
+    sock.close()
+
+
 
 if __name__ == "__main__":
     client()
