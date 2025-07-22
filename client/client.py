@@ -68,7 +68,7 @@ def client():
                         continue
                     sock.send(f"CHAT:{message}".encode())
                 elif op == "2":
-                    sock.send("QUIT".encode())
+                    sock.send("QUIT:".encode())
                     break
                 else:
                     print("ERROR: Enter 1 or 2")
@@ -78,26 +78,23 @@ def client():
                     if not username:
                         print("ERROR: Username cannot be empty")
                         continue
-                    sock.send("CREATE".encode())
-                    sock.send(username.encode())
+                    sock.send(f"CREATE:{username}".encode())
                 elif op == "2":
                     room_id = input("Room ID: ").strip()
                     username = input("Username: ").strip()
                     if not room_id or not username:
                         print("ERROR: Room ID and username cannot be empty")
                         continue
-                    sock.send("JOIN".encode())
-                    sock.send(room_id.encode())
-                    sock.send(username.encode())
+                    sock.send(f"JOIN:{room_id}:{username}".encode())
                 elif op == "3":
-                    sock.send("QUIT".encode())
+                    sock.send("QUIT:".encode())
                     break
                 else:
                     print("ERROR: Enter 1, 2, or 3")
 
     except KeyboardInterrupt:
         print("\nCLOSING: Shutting down")
-        sock.send("QUIT".encode())
+        sock.send("QUIT:".encode())
     except ConnectionError as e:
         print(f"ERROR: Connection error: {e}")
     finally:
