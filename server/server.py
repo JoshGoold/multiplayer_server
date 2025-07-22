@@ -52,8 +52,8 @@ def handle_client(conn, addr):
 
             print(f"[{addr}] {msg}")  # Debug: Log received message
             
-            parts = msg.split(":", 2)  # Allow for room_id:username in JOIN
-            msg_type = parts[0].upper() if parts else ""
+            parts = msg.split(":", 2)  
+            msg_type = parts[0]
             
             if msg_type == CREATE:
                 if len(parts) < 2 or not parts[1]:
@@ -80,7 +80,7 @@ def handle_client(conn, addr):
                     if not room_id or room_id not in rooms:
                         conn.send("ERROR: Invalid room state".encode())
                         continue
-                    message = parts[1] if len(parts) > 1 else ""
+                    message = parts[1]
                     if not message:
                         conn.send("ERROR: Message cannot be empty".encode())
                         continue
@@ -164,7 +164,7 @@ def broadcast_to_room(room_id, message):
         if room_id in rooms:
             for username, client in rooms[room_id].items():
                 try:
-                    client.send(f"[ROOM {room_id}] {message}\n".encode())
+                    client.send(f"[{room_id}] {message}\n".encode())
                 except ConnectionError:
                     print(f"[ERROR] Failed to send message to {username} in room {room_id}")
 
@@ -175,9 +175,9 @@ def send_message(message, p_username, room_id):
             for username, client in rooms[room_id].items():
                 try:
                     if username != p_username:
-                        client.send(f"[ROOM {room_id}] {p_username}: {message}".encode())
+                        client.send(f"[{room_id}] {p_username}: {message}".encode())
                     else:
-                        client.send(f"[ROOM {room_id}] You: {message}".encode())
+                        client.send(f"[{room_id}] You: {message}".encode())
                 except ConnectionError as e:
                     print(f"[ERROR] Failed to send message to {username} in room {room_id}: {e}")
 
