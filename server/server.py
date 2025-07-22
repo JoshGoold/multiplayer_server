@@ -1,6 +1,7 @@
 import socket
 import sys
 import threading
+import game_logic.main
 
 # server credentials
 host = '0.0.0.0'
@@ -48,7 +49,5 @@ def remove_client():
 def broadcast_to_room():
     pass
 
-def start_game():
-    pass
-        
-        
+
+
