@@ -2,6 +2,7 @@ import socket
 import threading
 import random
 import string
+from game_logic import main
 
 # Server credentials
 DATA_BUFF = 2048
@@ -12,10 +13,11 @@ CHAT = "CHAT"
 GUESS = "GUESS"
 CREATE = "CREATE"
 JOIN = "JOIN"
+START = "START"
 
 # Server setup
 HOST = socket.gethostbyname(socket.gethostname())
-PORT = 5060
+PORT = 5091
 ADDR = (HOST, PORT)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -81,6 +83,27 @@ def handle_client(conn, addr):
                         send_message(message, this_username, room_id)
             elif msg_type == QUIT:
                 connected = False
+            elif msg_type == START:
+                room_id = connections[conn]
+                if len(rooms[room_id]) > 1:
+                    if room_id not in main.game_state:
+                        res = main.start_game(room_id)
+                        state = main.game_state[room_id]
+                        print(state['word'])
+                        broadcast_to_room(room_id, f"{res['message']}\nWord: {'_ '*len(state['word'])}\n")
+            elif msg_type == GUESS:
+                room_id = connections[conn]
+                res = main.process_guess(room_id,this_username,parts[1])
+                state = main.get_game_state(room_id)
+                if "Correct" in res['message']:
+                    print(state['word'])
+                    broadcast_to_room(room_id, f"{res['message']}\nAttempts Left:{state['attempts_left']}\nWord: {'_ '*len(state['word'])}\nScores: {res['scores']}")
+                elif "wins the game" in res['message']:
+                    broadcast_to_room(room_id, f"{res['message']}")
+                    del main.game_state[room_id]
+                    broadcast_to_room(room_id, f"Enter START to begin new game")
+                else:
+                    broadcast_to_room(room_id, f"{res['message']}\nAttempts Left:{state['attempts_left']}\nWord: {'_ '*len(state['word'])}\n")
             else:
                 conn.send("ERROR: Invalid command".encode())
 
@@ -131,6 +154,8 @@ def join_room(room_id, username, client, addr):
     client.send(f"Successfully joined room {room_id}".encode())
     broadcast_to_room(room_id, f"{username} has joined room {room_id}")
     print(f"[ROOM JOINED] {username} joined room {room_id} at {addr}")
+    if len(rooms[room_id]) > 1:
+        broadcast_to_room(room_id, "[GAME] You may now enter START to begin game.")
 
 def gen_room_id():
     return ''.join(random.choice(string.ascii_uppercase) for _ in range(4))
