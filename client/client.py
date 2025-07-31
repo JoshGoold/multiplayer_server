@@ -4,7 +4,7 @@ import sys
 
 # Server address
 HOST = socket.gethostbyname(socket.gethostname())
-PORT = 5060
+PORT = 5091
 SERVER_ADDR = (HOST, PORT)
 DATA_BUFF = 2048
 
@@ -56,13 +56,19 @@ def client():
             break
 
     while True:
-        op = int(input("Enter (1) Chat or (2) to Exit: ").strip())
-        if op == 1:
+        op = input("Enter (1) Chat or (2) to Guess or (3) to Exit: ").strip()
+        numOP = 0 if op == "START" else int(op)
+        if numOP == 1:
             message = input("Message: ").strip()
             if not message:
                 print("[ERROR]: Message cannot be empty")
             sock.send(f"CHAT:{message}".encode())
-        elif op == 2:
+        elif op == "START":
+            sock.send(f"START:".encode())
+        elif numOP == 2:
+            guess = input("Guess word: ")
+            sock.send(f"GUESS:{guess}".encode())
+        elif numOP == 3:
             sock.send("QUIT:".encode())
             break
         else:
