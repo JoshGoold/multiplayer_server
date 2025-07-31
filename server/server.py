@@ -3,6 +3,8 @@ import threading
 import random
 import string
 
+# add if someone leave inform memebers and if the last person leaves end room
+
 # Server credentials
 DATA_BUFF = 2048
 
@@ -90,6 +92,8 @@ def handle_client(conn, addr):
         except Exception as e:
             print(f"[ERROR] Unexpected error with {addr}: {e}")
             connected = False
+        # finally:
+        #     client.close()
 
     # Cleanup
     with lock:
@@ -98,6 +102,7 @@ def handle_client(conn, addr):
             del rooms[room_id][this_username]
             if not rooms[room_id]:
                  del rooms[room_id]
+                 print(f"[ROOM CLOSED] Room {room_id} closed as last member left.")
             else:
                 broadcast_to_room(room_id, f"{this_username} has disconnected")
             del connections[conn]
@@ -138,11 +143,16 @@ def gen_room_id():
 def broadcast_to_room(room_id, message):
     with lock:
         if room_id in rooms:
+            to_remove =[]
             for username, client in rooms[room_id].items():
                 try:
                     client.send(f"{message}\n".encode())
                 except ConnectionError:
                     print(f"[ERROR] Failed to send message to {username} in room {room_id}")
+                    to_remove.append(username)
+            
+            for username in to_remove:
+                del rooms[room_id][username]
 
 def send_message(message, p_username, room_id):
     with lock:
