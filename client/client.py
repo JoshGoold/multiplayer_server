@@ -9,6 +9,7 @@ SERVER_ADDR = (HOST, PORT)
 DATA_BUFF = 2048
 
 def client():
+    room_proceed = threading.Event()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect(SERVER_ADDR)
@@ -26,6 +27,9 @@ def client():
                 print("[DISCONNECTED]: Server closed the connection")
                 break
             print(f"\n{msg}\n")
+            if msg.startswith("OK"):
+                # global room_proceed
+                room_proceed.set()
         sock.close()
                 
 
@@ -50,11 +54,15 @@ def client():
                 print("ERROR: Room ID and username cannot be empty")
                 continue
             sock.send(f"JOIN:{room_id}:{username}".encode())
-            phase1 = False
+            phase1=False
         elif answer == 3:
             sock.send("QUIT:".encode())
             break
 
+    print("Waiting for room entry confirmation from server...")
+    room_proceed.wait()
+    
+    # proceed with Phase 2
     while True:
         op = input("Enter (1) Chat or (2) to Guess or (3) to Exit: ").strip()
         numOP = 0 if op == "START" else int(op)
@@ -70,6 +78,7 @@ def client():
             sock.send(f"GUESS:{guess}".encode())
         elif numOP == 3:
             sock.send("QUIT:".encode())
+            room_proceed = False
             break
         else:
             print("[404]: Enter 1 or 2")

@@ -62,14 +62,21 @@ def handle_client(conn, addr):
             if msg_type == CREATE:           
                 username = parts[1].strip()
                 this_username = username
+                # conn.send("OK: creating room...".encode())
                 create_room(conn, username, addr)
 
             elif msg_type == JOIN:
-                room_id = parts[1].strip()
+                room_id = parts[1].strip().upper()
+                username = parts[2].strip()
                 if room_id not in rooms:
                     conn.send("ERROR: Room does not exist".encode())
                     continue
-                username = parts[2].strip()
+                if username in rooms[room_id]:
+                    conn.send("ERROR: Username already taken in this room".encode())
+                    continue
+                
+                # conn.send("OK: joining room...".encode())
+                
                 this_username = username
                 join_room(room_id, username, conn, addr)
 
@@ -85,6 +92,7 @@ def handle_client(conn, addr):
                         send_message(message, this_username, room_id)
             elif msg_type == QUIT:
                 connected = False
+                
             elif msg_type == START:
                 room_id = connections[conn]
                 if len(rooms[room_id]) > 1:
@@ -140,7 +148,7 @@ def create_room(client, username, addr):
             room_id = gen_room_id()
         rooms[room_id] = {username: client}
         connections[client] = room_id
-    
+    client.send("OK: creating room...".encode())
     client.send(room_id.encode())
     broadcast_to_room(room_id, f"\nROOM CREATED\nJoin Code: {room_id}\n")
     print(f"[ROOM CREATED] Room {room_id} by {username} at {addr}")
@@ -155,8 +163,8 @@ def join_room(room_id, username, client, addr):
             return
         rooms[room_id][username] = client
         connections[client] = room_id
-    
-    client.send(f"Successfully joined room {room_id}".encode())
+    client.send("OK: joining room...".encode())
+    client.send(f"Successfully joined room {room_id}\n".encode())
     broadcast_to_room(room_id, f"{username} has joined room {room_id}")
     print(f"[ROOM JOINED] {username} joined room {room_id} at {addr}")
     if len(rooms[room_id]) > 1:
