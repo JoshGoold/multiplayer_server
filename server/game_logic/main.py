@@ -12,7 +12,7 @@ def gen_word():
 def start_game(room):
     game_state[room] = {
         "word": gen_word(),
-        "attempts_left": 10,
+        "attempts_left": 5,
         "scores": {},
         "guessed": False,
         "winner": None

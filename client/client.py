@@ -77,6 +77,9 @@ def client():
             sock.send(f"START:".encode())
         elif op == "2":
             guess = input("Guess word: ")
+            if len(guess) > 12:
+                print('You can guess a max of 12 characters')
+                continue
             sock.send(f"GUESS:{guess}".encode())
         elif op == "3":
             sock.send("QUIT:".encode())
