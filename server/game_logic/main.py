@@ -3,6 +3,8 @@ import random
 game_state = {}
 correct_word_score = 10
 
+
+
 def gen_word():
     words = ["Watermelon", "Kangaroo", "Jurassic", "Monster", "Malevolent", "Situational", "Motivational", "Iceberg", "Eclipse", "Outrageous"]
     return random.choice(words)

@@ -33,6 +33,16 @@ rooms = {}
 # Connections dictionary: maps client_socket to room_id
 connections = {}
 
+def check_letter_match(guess, word):
+    output = ["_"] * len(word) 
+    for letter in guess:
+        if letter in word:
+            for i in range(len(word)):
+                if word[i] == letter:
+                    output[i] = letter  
+
+    return " ".join(output) 
+
 def server():
     print(f"[SERVER] started at {ADDR}")
     sock.listen()
@@ -113,7 +123,8 @@ def handle_client(conn, addr):
                     del main.game_state[room_id]
                     broadcast_to_room(room_id, f"Enter START to begin new game")
                 else:
-                    broadcast_to_room(room_id, f"{res['message']}\nAttempts Left:{state['attempts_left']}\nWord: {'_ '*len(state['word'])}\n")
+                    updateWord = check_letter_match(parts[1], state['word'])
+                    broadcast_to_room(room_id, f"{res['message']}\nAttempts Left:{state['attempts_left']}\nWord: {updateWord}\n")
             else:
                 conn.send("ERROR: Invalid command".encode())
 

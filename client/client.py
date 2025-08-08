@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import math
 
 # Server address
 HOST = socket.gethostbyname(socket.gethostname())
@@ -58,6 +59,8 @@ def client():
         elif answer == 3:
             sock.send("QUIT:".encode())
             break
+        else: 
+            continue
 
     print("Waiting for room entry confirmation from server...")
     room_proceed.wait()
@@ -65,23 +68,22 @@ def client():
     # proceed with Phase 2
     while True:
         op = input("Enter (1) Chat or (2) to Guess or (3) to Exit: ").strip()
-        numOP = 0 if op == "START" else int(op)
-        if numOP == 1:
+        if op == "1":
             message = input("Message: ").strip()
             if not message:
                 print("[ERROR]: Message cannot be empty")
             sock.send(f"CHAT:{message}".encode())
         elif op == "START":
             sock.send(f"START:".encode())
-        elif numOP == 2:
+        elif op == "2":
             guess = input("Guess word: ")
             sock.send(f"GUESS:{guess}".encode())
-        elif numOP == 3:
+        elif op == "3":
             sock.send("QUIT:".encode())
             room_proceed = False
             break
         else:
-            print("[404]: Enter 1 or 2")
+           continue
 
     sock.close()
 
