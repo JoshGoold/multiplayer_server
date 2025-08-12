@@ -1,6 +1,10 @@
 import random
 
+# Stores the current game state for each room
+# Structure: { room_id: { word, attempts_left, scores, guessed, winner } 
 game_state = {}
+
+# Points awarded for correctly guessing a word
 correct_word_score = 10
 
 
@@ -29,12 +33,16 @@ def process_guess(room, username, guess):
         return {"action": "error", "message": f"Room {room} has no active game!"}
     
     state = game_state[room]
+    
+     # If the round is already over (word guessed or no attempts left)
     if state["guessed"] or state["attempts_left"] == 0:
         return {"action": "game_update", "message": "Round is over! Start a new game.", "attempts_left": 0}
 
+# Ensure player has a score entry
     if username not in state["scores"]:
         state["scores"][username] = 0
     
+    # Check if player reached winning score
     if guess.lower() == state["word"].lower():
         state["guessed"] = True
         state["scores"][username] += correct_word_score
@@ -47,6 +55,7 @@ def process_guess(room, username, guess):
                 "word": state["word"],
                 "scores": state["scores"]
             }
+        # If not yet winner, start a new word immediately
         state["word"] = gen_word()
         state["attempts_left"] = 10
         state["guessed"] = False
@@ -57,8 +66,11 @@ def process_guess(room, username, guess):
             "attempts_left": state["attempts_left"],
             "scores": state["scores"]
         }
+        # Incorrect guess
     else:
         state["attempts_left"] -= 1
+        
+        # If no attempts left, reveal the word
         if state["attempts_left"] <= 0:
             return {
                 "action": "game_update",
@@ -67,6 +79,7 @@ def process_guess(room, username, guess):
                 "message": f"Out of attempts! The word was {state['word']}. New word selected!",
                 "scores": state["scores"]
             }
+        # Still have attempts left
         return {
             "action": "game_update",
             "room": room,
