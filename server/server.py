@@ -4,7 +4,6 @@ import random
 import string
 from game_logic import main
 
-# add if someone leave inform memebers and if the last person leaves end room
 
 # Server credentials
 DATA_BUFF = 2048
@@ -17,7 +16,7 @@ CREATE = "CREATE"
 JOIN = "JOIN"
 START = "START"
 
-# Server setup
+# Server socket setup
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = 5091
 ADDR = (HOST, PORT)
@@ -43,6 +42,7 @@ def check_letter_match(guess, word):
 
     return " ".join(output) 
 
+# main server loop
 def server():
     print(f"[SERVER] started at {ADDR}")
     sock.listen()
@@ -52,6 +52,7 @@ def server():
         thread.start()
         print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
 
+# client handler
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected")
     connected = True
@@ -60,19 +61,20 @@ def handle_client(conn, addr):
     while connected:
         try:
             msg = conn.recv(DATA_BUFF).decode().strip()
-            if not msg:  # Handle client disconnection
+            if not msg:  # if message is empty, assume disconnection
                 connected = False
                 break
 
-            print(f"[{addr}] {msg}")  # Debug: Log received message
+            print(f"[{addr}] {msg}")  # Log received message
             
+            # Split the incoming message into command parts
             parts = msg.split(":", 2)  
             msg_type = parts[0]
             
             if msg_type == CREATE:           
                 username = parts[1].strip()
                 this_username = username
-                # conn.send("OK: creating room...".encode())
+                
                 create_room(conn, username, addr)
 
             elif msg_type == JOIN:
@@ -85,7 +87,7 @@ def handle_client(conn, addr):
                     conn.send("ERROR: Username already taken in this room".encode())
                     continue
                 
-                # conn.send("OK: joining room...".encode())
+              
                 
                 this_username = username
                 join_room(room_id, username, conn, addr)
@@ -101,15 +103,16 @@ def handle_client(conn, addr):
                         print(f"DEBUG: Processing CHAT from {this_username} in room {room_id}: {message}")
                         send_message(message, this_username, room_id)
             elif msg_type == QUIT:
-                connected = False
+                connected = False #when client wants to leave
                 
             elif msg_type == START:
                 room_id = connections[conn]
+                #only start if there are at least 2 players
                 if len(rooms[room_id]) > 1:
                     if room_id not in main.game_state:
                         res = main.start_game(room_id)
                         state = main.game_state[room_id]
-                        print(state['word'])
+                        print(state['word']) #print actual word on server side
                         broadcast_to_room(room_id, f"{res['message']}\nWord: {'_ '*len(state['word'])}\n")
             elif msg_type == GUESS:
                 room_id = connections[conn]
@@ -120,7 +123,7 @@ def handle_client(conn, addr):
                     broadcast_to_room(room_id, f"{res['message']}\nAttempts Left:{state['attempts_left']}\nWord: {'_ '*len(state['word'])}\nScores: {res['scores']}")
                 elif "wins the game" in res['message']:
                     broadcast_to_room(room_id, f"{res['message']}")
-                    del main.game_state[room_id]
+                    del main.game_state[room_id] 
                     broadcast_to_room(room_id, f"Enter START to begin new game")
                 else:
                     updateWord = check_letter_match(parts[1], state['word'])
@@ -134,10 +137,9 @@ def handle_client(conn, addr):
         except Exception as e:
             print(f"[ERROR] Unexpected error with {addr}: {e}")
             connected = False
-        # finally:
-        #     client.close()
+      
 
-    # Cleanup
+    # Cleanup after client disconnects
     with lock:
         if conn in connections:
             room_id = connections.get(conn)
@@ -152,6 +154,7 @@ def handle_client(conn, addr):
     conn.close()
     print(f"[DISCONNECTED] {addr}")
 
+# room management
 def create_room(client, username, addr):
     with lock:
         room_id = gen_room_id()
@@ -179,11 +182,12 @@ def join_room(room_id, username, client, addr):
     broadcast_to_room(room_id, f"{username} has joined room {room_id}")
     print(f"[ROOM JOINED] {username} joined room {room_id} at {addr}")
     if len(rooms[room_id]) > 1:
-        broadcast_to_room(room_id, "[GAME] You may now enter START to begin game.")
+        broadcast_to_room(room_id, "[GAME] Creator of room, you may now enter START to begin game.")
 
 def gen_room_id():
     return ''.join(random.choice(string.ascii_uppercase) for _ in range(4))
 
+# messaging functions
 def broadcast_to_room(room_id, message):
     with lock:
         if room_id in rooms:
@@ -211,5 +215,6 @@ def send_message(message, p_username, room_id):
                 except ConnectionError as e:
                     print(f"[ERROR] Failed to send message to {username} in room {room_id}: {e}")
 
+# entry (main function)
 if __name__ == "__main__":
     server()

@@ -38,6 +38,7 @@ def client():
     receive_thread = threading.Thread(target=listen_for_messages_thread, daemon=True)
     receive_thread.start()
 
+# phase 1: user decides whether to create, join or quit
     phase1 = True
     while phase1:
         answer = int(input("CREATE ROOM: 1\nJOIN ROOM: 2\nQUIT: 3\nEnter here:"))
@@ -65,7 +66,7 @@ def client():
     print("Waiting for room entry confirmation from server...")
     room_proceed.wait()
     
-    # proceed with Phase 2
+    # proceed with Phase 2 : Interacting in rooms
     while True:
         op = input("Enter (1) Chat or (2) to Guess or (3) to Exit: ").strip()
         if op == "1":
